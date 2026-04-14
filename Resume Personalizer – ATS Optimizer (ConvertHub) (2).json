@@ -1,0 +1,803 @@
+{
+  "name": "Resume Personalizer – ATS Optimizer (ConvertHub)",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "203a885d-e89b-41b9-84d5-127ac9a839c6",
+      "name": "Gemini – ATS Optimize Resume",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        768,
+        -48
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "aU0tpJ2s7XQ3nEos",
+          "name": "Google Gemini(PaLM) Api account 11"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get Gemini raw output\nconst raw = $input.first().json.text || '';\n\n// Strip markdown code fences if Gemini wrapped output\nlet cleaned = raw.trim();\ncleaned = cleaned.replace(/^```latex\\s*/i, '');\ncleaned = cleaned.replace(/^```\\s*/i, '');\ncleaned = cleaned.replace(/\\s*```$/i, '');\ncleaned = cleaned.trim();\n\n// Validate it looks like LaTeX\nif (!cleaned.includes('\\\\documentclass') || !cleaned.includes('\\\\end{document}')) {\n  throw new Error('Gemini output does not look like valid LaTeX. Raw output: ' + raw.substring(0, 200));\n}\n\n// Convert LaTeX string to binary buffer (UTF-8) for file upload\nconst buffer = Buffer.from(cleaned, 'utf-8');\n\nreturn [\n  {\n     \n  binary: {\n      latexFile: {\n        data: buffer.toString('base64'),\n        mimeType: 'application/x-latex',\n        fileName: 'resume.tex',\n        fileExtension: 'tex'\n      }\n    }\n  }\n];"
+      },
+      "id": "e40e6e47-7581-4378-8e1f-d24faa15ab51",
+      "name": "Code – Clean & Convert to File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        -272
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://texapi.ovh/api/latex/compile/file",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "compiler",
+              "value": "lualatex"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-KEY",
+              "value": "PWkZPXA0o8r7eC3t34--WTJPMRf6lU3gniq6SQrFM8g"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "files",
+              "inputDataFieldName": "latexFile"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fe65d39e-aa6b-4214-9c8c-58d38ee84f37",
+      "name": "HTTP – Submit LaTeX to ConvertHub",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1264,
+        -272
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "id": "4783f8bb-be79-4a43-85fe-607acc639c59",
+      "name": "Wait – 15 Seconds for Conversion",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        -272
+      ],
+      "webhookId": "resume-wait"
+    },
+    {
+      "parameters": {
+        "url": "=https://texapi.ovh/api/latex/files/{{ $json.fileId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-API-KEY",
+              "value": "SsWDddWzZTFd3D3KeOZqun9HRGJ36h4rodfymwN2TMo"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "document.pdf"
+            }
+          }
+        }
+      },
+      "id": "97b6aa19-1bf0-4cf2-bfee-a0c92d7d0e38",
+      "name": "HTTP – Download PDF",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1936,
+        -272
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an expert ATS resume optimizer and LaTeX developer.\n\nYou will receive a user's resume content and a job description.\nYour job is to generate a complete, ATS-optimized LaTeX resume.\n\n## STRICT RULES:\n Output MUST fit in exactly ONE page. To achieve this:\n    - Keep Professional Summary to maximum 3 lines\n    - Maximum 3 projects, each with maximum 3 bullets\n    - Skills section compact — no repetition\n    - Reduce bullet length — concise, punchy, max 1 line each\n    - If content is too long, prioritize: Summary > Skills > Most relevant projects > Education > Others\n    - Use \\vspace{-4pt} between sections to reduce spacing if needed\n    - Never sacrifice ATS keywords for space — cut less relevant content instead\n1. Return ONLY valid LaTeX code. No explanations, no markdown, no backticks.\n2. Use ONLY these LaTeX packages: geometry, titlesec, enumitem, hyperref, parskip.\n3. Personal info (name, email, phone, LinkedIn, GitHub) — use exactly as in resume.\n4. PROFESSIONAL SUMMARY — always include, rewrite to match JD keywords, 3-4 lines.\n5. EDUCATION — always include, use exact details from resume.\n6. SKILLS — always include, use user's real skills, add JD keywords where relevant.\n7. For all other sections — ONLY include if user's resume has that data:\n   - Work Experience → include if user has jobs/internships\n   - Projects → include if user has projects\n   - Certifications → include if user has certifications\n   - Volunteering & Leadership → include if user has it\n   - Publications → include if user has it\n   - Achievements → include if user has it\n   - Never invent or add sections that don't exist in user's resume.\n8. Reframe all bullets to highlight skills relevant to the JD.\n9. Keep real project names, job titles, company names, dates, tech stacks.\n10. Output must be valid compilable LaTeX.\n\n## LATEX FORMATTING RULES (must follow exactly):\n- \\setlength{\\parskip}{1pt} — reduce paragraph spacing\n- \\titlespacing*{\\section}{0pt}{6pt}{4pt} — tighter section spacing\n- fontsize can go to 9.5pt if needed for space\n- documentclass: article, a4paper, 10pt\n- margins: left=0.4in, right=0.4in, top=0.45in, bottom=0.45in\n- No page numbers: \\pagenumbering{gobble}\n- Section format: \\titleformat{\\section}{\\bfseries\\large}{}{0em}{}[\\titlerule]\n- Use \\hfill for right-aligned dates\n- Use itemize with noitemsep, topsep=0pt for bullet points\n- Use \\href for email, LinkedIn, GitHub links\n- No photo\n\n## USER RESUME CONTENT:\n{{ $json.resume_text }}\n\n## JOB DESCRIPTION:\n{{ $json.jd }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        688,
+        -272
+      ],
+      "id": "8ed72ee8-fffb-4606-8767-681e863c4298",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "jsCode": "const resultPath = $input.first().json.resultPath;\n\n// Extract everything after last \"/\"\nconst fileId = resultPath.split('/').pop();\n\nreturn [\n  {\n    json: {\n      fileId,\n      downloadUrl: `https://api.converthub.com/api/latex/files/${fileId}`,\n      userEmail: $('Code – Clean & Convert to File').first().json.userEmail\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1712,
+        -272
+      ],
+      "id": "acab3acd-ea22-4768-a6c1-203228faa7d0",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zS1K7xAadOAdlI5Z88RU_gMM4VGCg4wGB1SHtvROMyU",
+          "mode": "list",
+          "cachedResultName": "Resume Personalizer",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zS1K7xAadOAdlI5Z88RU_gMM4VGCg4wGB1SHtvROMyU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zS1K7xAadOAdlI5Z88RU_gMM4VGCg4wGB1SHtvROMyU/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.body.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -880,
+        64
+      ],
+      "id": "9a8a9115-b8e6-446f-aa55-9c8e1d253e6b",
+      "name": "Get row(s) in sheet",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4HYswQilKagbpG9z",
+          "name": "Google Sheets account 4"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "resume-generator",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1104,
+        -272
+      ],
+      "id": "f0e7408b-54ba-4af7-b2e9-082d36d1ccdb",
+      "name": "Webhook",
+      "webhookId": "380f9426-71f0-4aa7-b559-9dba8beb1fc1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "check-email",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1104,
+        64
+      ],
+      "id": "c4c9fc7e-e79b-407e-bced-bd127b708752",
+      "name": "Webhook1",
+      "webhookId": "380f9426-71f0-4aa7-b559-9dba8beb1fc1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nconst email =$('Webhook1').first().json.body.email;\n\n// Agar koi row mili toh old user\nif (rows.length > 0 && rows[0].json.email) {\n  const user = rows[0].json;\n  return [\n    {\n      json: {\n        new_user: false,\n        name: user.name || '',\n        email: user.email,\n        resume_text: user.resume_text\n      }\n    }\n  ];\n}\n\n// Koi row nahi mili toh new user\nreturn [\n  {\n    json: {\n      new_user: true,\n      email: email,\n      name: '',\n      resume_text: ''\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -656,
+        64
+      ],
+      "id": "7cd4ef62-0d5c-419a-b142-da82d5d9b4b5",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -432,
+        64
+      ],
+      "id": "d8af2d05-2231-41d3-8ef3-e25b499c6380",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "content": "workflow to check if the user already exist in the databse or not ",
+        "height": 256,
+        "width": 1728
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1584,
+        -48
+      ],
+      "typeVersion": 1,
+      "id": "646f50a8-4792-4194-983a-525e51c81bd5",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zS1K7xAadOAdlI5Z88RU_gMM4VGCg4wGB1SHtvROMyU",
+          "mode": "list",
+          "cachedResultName": "Resume Personalizer",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zS1K7xAadOAdlI5Z88RU_gMM4VGCg4wGB1SHtvROMyU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zS1K7xAadOAdlI5Z88RU_gMM4VGCg4wGB1SHtvROMyU/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "email",
+              "lookupValue": "={{ $json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -656,
+        -272
+      ],
+      "id": "66a991bb-75df-4d77-a4ef-d42f8102df01",
+      "name": "Get row(s) in sheet1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4HYswQilKagbpG9z",
+          "name": "Google Sheets account 4"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst binary = $input.first().binary;\n\nconst email = body.email || '';\nconst jd = body.jd || '';\n\n// Binary mein resume check karo\nconst isNewUser = !!(binary && Object.keys(binary).length > 0);\n\nif (!email) throw new Error('Email missing');\nif (!jd) throw new Error('Job Description missing');\n\nreturn [\n  {\n    json: {\n      email,\n      jd,\n      isNewUser\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -880,
+        -272
+      ],
+      "id": "c87c61ef-d4fa-4d67-8671-e8acfc58541e",
+      "name": "Normalize Input"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "cbf850bd-95f5-4ccb-ad7c-6eff316ae411",
+              "leftValue": "={{ $('Normalize Input').item.json.isNewUser }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -432,
+        -272
+      ],
+      "id": "06788e59-2674-490c-9852-63e96ebeafd0",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "resume",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        16,
+        -368
+      ],
+      "id": "787af353-fbc6-4aa3-933e-570c91c446d9",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const pdfText = $input.first().json.text || '';\nconst email = $('Normalize Input').first().json.email;\nconst jd = $('Normalize Input').first().json.jd;\n\nif (!pdfText || pdfText.trim().length < 50) {\n  throw new Error('PDF text extract nahi hua.');\n}\n\nreturn [\n  {\n    json: {\n      email,\n      jd,\n      resume_text: pdfText.trim()\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -368
+      ],
+      "id": "0dcc2887-4af9-46c3-9d98-0fac5c7565ec",
+      "name": "Save New User"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1zS1K7xAadOAdlI5Z88RU_gMM4VGCg4wGB1SHtvROMyU",
+          "mode": "list",
+          "cachedResultName": "Resume Personalizer",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zS1K7xAadOAdlI5Z88RU_gMM4VGCg4wGB1SHtvROMyU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zS1K7xAadOAdlI5Z88RU_gMM4VGCg4wGB1SHtvROMyU/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "email",
+              "displayName": "email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "resume_text",
+              "displayName": "resume_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "total_applications",
+              "displayName": "total_applications",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "last_applied",
+              "displayName": "last_applied",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        464,
+        -368
+      ],
+      "id": "d6e5902e-c601-470d-9ae9-b453540390c3",
+      "name": "Save to Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "4HYswQilKagbpG9z",
+          "name": "Google Sheets account 4"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst email = $input.first().json.email;\nconst jd = $input.first().json.jd;\n\nconst resumeText = $('Get row(s) in sheet1').first().json.resume_text || '';\n\nif (!resumeText) {\n  throw new Error('Resume not found for this user. Please use new user flow.');\n}\n\nreturn [\n  {\n    json: {\n      email,\n      jd,\n      resume_text: resumeText\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        32,
+        -192
+      ],
+      "id": "41678697-e91d-499f-bb78-5cd9836f3da1",
+      "name": "Fetch Resume Text"
+    },
+    {
+      "parameters": {
+        "respondWith": "binary",
+        "responseDataSource": "set",
+        "inputFieldName": "document.pdf",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/pdf"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2160,
+        -272
+      ],
+      "id": "b84a36de-c7f1-4232-a2cf-7111bc058dfa",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: $('Normalize Input').first().json,\n    binary: $('Webhook').first().binary\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -368
+      ],
+      "id": "b943daa3-e8f4-4e23-ba4c-70b6c7ac6344",
+      "name": "Code in JavaScript2"
+    }
+  ],
+  "pinData": {
+    "Webhook1": [
+      {
+        "json": {
+          "headers": {
+            "host": "n8n.srv965596.hstgr.cloud",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36",
+            "content-length": "35",
+            "accept": "*/*",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en-US,en;q=0.8",
+            "content-type": "application/json",
+            "origin": "http://127.0.0.1:5500",
+            "priority": "u=1, i",
+            "referer": "http://127.0.0.1:5500/",
+            "sec-ch-ua": "\"Brave\";v=\"147\", \"Not.A/Brand\";v=\"8\", \"Chromium\";v=\"147\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "sec-gpc": "1",
+            "x-forwarded-for": "103.187.216.242",
+            "x-forwarded-host": "n8n.srv965596.hstgr.cloud",
+            "x-forwarded-port": "443",
+            "x-forwarded-proto": "https",
+            "x-forwarded-server": "71d7dfba04ee",
+            "x-real-ip": "103.187.216.242"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "email": "ajaditya25003@gmail.com"
+          },
+          "webhookUrl": "https://n8n.srv965596.hstgr.cloud/webhook/check-email",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Code – Clean & Convert to File": {
+      "main": [
+        [
+          {
+            "node": "HTTP – Submit LaTeX to ConvertHub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP – Submit LaTeX to ConvertHub": {
+      "main": [
+        [
+          {
+            "node": "Wait – 15 Seconds for Conversion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait – 15 Seconds for Conversion": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP – Download PDF": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini – ATS Optimize Resume": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Code – Clean & Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP – Download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fetch Resume Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Save New User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save New User": {
+      "main": [
+        [
+          {
+            "node": "Save to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Resume Text": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "095f8647-76bc-42d6-ae84-f2451676c190",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "5a064eab1f268946bc007c4172b2fb6debef9dbda2a90313cc0c931db4dbf7e6"
+  },
+  "id": "OlyMd44QMwVpOhM1",
+  "tags": []
+}
