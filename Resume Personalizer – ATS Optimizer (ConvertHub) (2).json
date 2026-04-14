@@ -51,7 +51,7 @@
           "parameters": [
             {
               "name": "X-API-KEY",
-              "value": "PWkZPXA0o8r7eC3t34--WTJPMRf6lU3gniq6SQrFM8g"
+              "value": "YOUR_CONVERTHUB_SUBMIT_KEY"
             }
           ]
         },
@@ -100,7 +100,7 @@
           "parameters": [
             {
               "name": "X-API-KEY",
-              "value": "SsWDddWzZTFd3D3KeOZqun9HRGJ36h4rodfymwN2TMo"
+"value": "YOUR_CONVERTHUB_DOWNLOAD_KEY"
             }
           ]
         },
