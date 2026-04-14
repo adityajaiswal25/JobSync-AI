@@ -1,0 +1,1680 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JobSync AI — Sync your resume to JDs [ATS optimised]</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #050508;
+      --surface: #0d0d14;
+      --surface2: #13131e;
+      --border: rgba(255, 255, 255, 0.07);
+      --accent: #6af0a0;
+      --accent2: #3d9fff;
+      --accent3: #ff6b6b;
+      --text: #f0f0f8;
+      --text-muted: #6b6b88;
+      --text-dim: #9898b8;
+      --glow: rgba(106, 240, 160, 0.15);
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+      cursor: none;
+    }
+
+    /* Custom cursor */
+    .cursor {
+      position: fixed;
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9999;
+      transition: transform 0.1s;
+      mix-blend-mode: screen;
+    }
+
+    .cursor-ring {
+      position: fixed;
+      width: 32px;
+      height: 32px;
+      border: 1px solid rgba(106, 240, 160, 0.4);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 9998;
+      transition: all 0.15s ease;
+    }
+
+    /* Grid background */
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Noise texture overlay */
+    .noise {
+      position: fixed;
+      inset: 0;
+      opacity: 0.04;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Glow orbs */
+    .orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .orb1 {
+      width: 500px;
+      height: 500px;
+      background: rgba(106, 240, 160, 0.06);
+      top: -100px;
+      right: -100px;
+    }
+
+    .orb2 {
+      width: 400px;
+      height: 400px;
+      background: rgba(61, 159, 255, 0.05);
+      bottom: 200px;
+      left: -100px;
+    }
+
+    .orb3 {
+      width: 300px;
+      height: 300px;
+      background: rgba(255, 107, 107, 0.04);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Sections */
+    section {
+      position: relative;
+      z-index: 2;
+    }
+
+    /* ══════════════════ HERO ══════════════════ */
+    #hero {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 80px 24px 60px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(106, 240, 160, 0.08);
+      border: 1px solid rgba(106, 240, 160, 0.2);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 40px;
+      animation: fadeUp 0.8s ease both;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .hero-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(48px, 8vw, 96px);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -0.03em;
+      margin-bottom: 28px;
+      animation: fadeUp 0.8s 0.1s ease both;
+    }
+
+    .hero-title .line1 {
+      display: block;
+      color: var(--text);
+    }
+
+    .hero-title .line2 {
+      display: block;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 18px;
+      color: var(--text-dim);
+      max-width: 520px;
+      line-height: 1.7;
+      margin-bottom: 56px;
+      font-weight: 300;
+      animation: fadeUp 0.8s 0.2s ease both;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 48px;
+      justify-content: center;
+      margin-bottom: 64px;
+      animation: fadeUp 0.8s 0.3s ease both;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-num {
+      font-family: 'Syne', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    /* CTA Email input */
+    .email-input-wrapper {
+      animation: fadeUp 0.8s 0.4s ease both;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    .email-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: block;
+      text-align: left;
+    }
+
+    .email-row {
+      display: flex;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .email-row:focus-within {
+      border-color: rgba(106, 240, 160, 0.4);
+      box-shadow: 0 0 0 4px rgba(106, 240, 160, 0.06);
+    }
+
+    .email-row input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      padding: 16px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      color: var(--text);
+    }
+
+    .email-row input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #050508;
+      border: none;
+      padding: 16px 28px;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: none;
+      transition: all 0.2s;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .btn-primary:hover {
+      background: #88f8b8;
+      transform: translateX(2px);
+    }
+
+    .btn-primary:active {
+      transform: translateX(0);
+    }
+
+    /* Scroll indicator */
+    .scroll-hint {
+      position: absolute;
+      bottom: 32px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-muted);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-family: 'DM Mono', monospace;
+      animation: fadeUp 1s 1s ease both;
+    }
+
+    .scroll-line {
+      width: 1px;
+      height: 40px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+      animation: scrollLine 2s infinite;
+    }
+
+    /* ══════════════════ FEATURES ══════════════════ */
+    #features {
+      padding: 120px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(32px, 4vw, 52px);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 64px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.3s, transform 0.3s;
+    }
+
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top left, rgba(106, 240, 160, 0.04), transparent 60%);
+      pointer-events: none;
+    }
+
+    .feature-card:hover {
+      border-color: rgba(106, 240, 160, 0.25);
+      transform: translateY(-4px);
+    }
+
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      background: rgba(106, 240, 160, 0.1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    .feature-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 10px;
+    }
+
+    .feature-desc {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+
+    /* ══════════════════ HOW IT WORKS ══════════════════ */
+    #how {
+      padding: 120px 24px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .step {
+      display: flex;
+      gap: 32px;
+      position: relative;
+      padding-bottom: 48px;
+    }
+
+    .step:last-child {
+      padding-bottom: 0;
+    }
+
+    .step-left {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .step-num {
+      width: 44px;
+      height: 44px;
+      border: 1px solid rgba(106, 240, 160, 0.3);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .step-line {
+      width: 1px;
+      flex: 1;
+      background: linear-gradient(to bottom, rgba(106, 240, 160, 0.2), transparent);
+      margin-top: 12px;
+    }
+
+    .step:last-child .step-line {
+      display: none;
+    }
+
+    .step-content {
+      padding-top: 10px;
+    }
+
+    .step-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .step-desc {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.7;
+    }
+
+    /* ══════════════════ ABOUT ══════════════════ */
+    #about {
+      padding: 120px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .about-grid {
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+    }
+
+    .about-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 40px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .about-card::after {
+      content: '';
+      position: absolute;
+      top: -60px;
+      right: -60px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(106, 240, 160, 0.08), transparent 70%);
+      pointer-events: none;
+    }
+
+    .about-avatar {
+      width: 72px;
+      height: 72px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Syne', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: #050508;
+      margin-bottom: 24px;
+    }
+
+    .about-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .about-role {
+      font-size: 13px;
+      color: var(--accent);
+      margin-bottom: 16px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .about-bio {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.8;
+      margin-bottom: 24px;
+    }
+
+    .about-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .about-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-decoration: none;
+      transition: all 0.2s;
+      font-family: 'DM Mono', monospace;
+      cursor: none;
+    }
+
+    .about-link:hover {
+      border-color: rgba(106, 240, 160, 0.3);
+      color: var(--accent);
+    }
+
+    .about-text .section-title {
+      margin-bottom: 20px;
+    }
+
+    .about-text p {
+      font-size: 15px;
+      color: var(--text-dim);
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+
+    /* ══════════════════ APP MODAL ══════════════════ */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 5, 8, 0.92);
+      backdrop-filter: blur(20px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 48px 60px;
+      width: 100%;
+      max-width: 900px;
+      max-height: 95vh;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(106, 240, 160, 0.2) transparent;
+      position: relative;
+      transform: translateY(20px) scale(0.98);
+      transition: transform 0.3s;
+    }
+
+    .modal-overlay.active .modal {
+      transform: translateY(0) scale(1);
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 32px;
+      height: 32px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: none;
+      color: var(--text-muted);
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+
+    .modal-close:hover {
+      color: var(--text);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .modal-step {
+      display: none;
+    }
+
+    .modal-step.active {
+      display: block;
+    }
+
+    .modal-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .modal-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 34px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.2;
+    }
+
+    .modal-sub {
+      font-size: 16px;
+      color: var(--text-dim);
+      margin-bottom: 32px;
+      line-height: 1.6;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .form-input:focus {
+      border-color: rgba(106, 240, 160, 0.4);
+      box-shadow: 0 0 0 3px rgba(106, 240, 160, 0.06);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    textarea.form-input {
+      resize: vertical;
+      min-height: 180px;
+    }
+
+    .file-upload {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px dashed rgba(106, 240, 160, 0.2);
+      border-radius: 10px;
+      padding: 28px;
+      text-align: center;
+      cursor: none;
+      transition: all 0.2s;
+      position: relative;
+    }
+
+    .file-upload:hover {
+      border-color: rgba(106, 240, 160, 0.4);
+      background: rgba(106, 240, 160, 0.03);
+    }
+
+    .file-upload input {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    .file-upload-icon {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+
+    .file-upload-text {
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .file-upload-text span {
+      color: var(--accent);
+    }
+
+    .file-name {
+      font-size: 12px;
+      color: var(--accent);
+      margin-top: 8px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .btn-full {
+      width: 100%;
+      background: var(--accent);
+      color: #050508;
+      border: none;
+      border-radius: 10px;
+      padding: 16px;
+      font-family: 'Syne', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: none;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+
+    .btn-full:hover {
+      background: #88f8b8;
+      transform: translateY(-1px);
+    }
+
+    .btn-full:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .error-msg {
+      font-size: 12px;
+      color: var(--accent3);
+      margin-top: 8px;
+      font-family: 'DM Mono', monospace;
+      display: none;
+    }
+
+    .error-msg.show {
+      display: block;
+    }
+
+    /* Welcome back */
+    .welcome-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(106, 240, 160, 0.08);
+      border: 1px solid rgba(106, 240, 160, 0.2);
+      border-radius: 100px;
+      padding: 6px 14px;
+      font-size: 13px;
+      color: var(--accent);
+      margin-bottom: 20px;
+    }
+
+    /* Loading */
+    .loading-screen {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .loading-ring {
+      width: 64px;
+      height: 64px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 24px;
+    }
+
+    .loading-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .loading-sub {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 24px;
+    }
+
+    .loading-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+    }
+
+    .loading-step-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      font-family: 'DM Mono', monospace;
+      transition: color 0.3s;
+    }
+
+    .loading-step-item.done {
+      color: var(--accent);
+    }
+
+    .loading-step-item.active {
+      color: var(--text);
+    }
+
+    .step-indicator {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+    }
+
+    .loading-step-item.done .step-indicator {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #050508;
+    }
+
+    .loading-step-item.active .step-indicator {
+      border-color: var(--accent);
+      animation: pulse 1s infinite;
+    }
+
+    /* PDF Result */
+    .pdf-result {
+      text-align: center;
+    }
+
+    .pdf-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+    }
+
+    .pdf-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .pdf-sub {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 32px;
+    }
+
+    .pdf-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .btn-outline {
+      padding: 12px 24px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: none;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-download {
+      padding: 12px 24px;
+      background: var(--accent);
+      border: none;
+      border-radius: 10px;
+      color: #050508;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: none;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-download:hover {
+      background: #88f8b8;
+    }
+
+    /* PDF Preview iframe */
+    .pdf-preview {
+      width: 100%;
+      height: 400px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      margin-bottom: 20px;
+      background: var(--surface2);
+    }
+
+    /* ══════════════════ FOOTER ══════════════════ */
+    footer {
+      position: relative;
+      z-index: 2;
+      border-top: 1px solid var(--border);
+      padding: 48px 24px;
+      text-align: center;
+    }
+
+    .footer-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .footer-sub {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+
+    .footer-link {
+      font-size: 13px;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-family: 'DM Mono', monospace;
+      transition: color 0.2s;
+      cursor: none;
+    }
+
+    .footer-link:hover {
+      color: var(--accent);
+    }
+
+    .footer-copy {
+      font-size: 12px;
+      color: var(--text-muted);
+      opacity: 0.5;
+    }
+
+    /* Animations */
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    @keyframes scrollLine {
+      0% {
+        opacity: 0;
+        transform: scaleY(0);
+        transform-origin: top;
+      }
+
+      50% {
+        opacity: 1;
+        transform: scaleY(1);
+      }
+
+      100% {
+        opacity: 0;
+        transform: scaleY(0);
+        transform-origin: bottom;
+      }
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-12px);
+      }
+    }
+
+    /* Reveal on scroll */
+    .reveal {
+      opacity: 0;
+      transform: translateY(32px);
+      transition: opacity 0.7s ease, transform 0.7s ease;
+    }
+
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .reveal-delay-1 {
+      transition-delay: 0.1s;
+    }
+
+    .reveal-delay-2 {
+      transition-delay: 0.2s;
+    }
+
+    .reveal-delay-3 {
+      transition-delay: 0.3s;
+    }
+
+    /* Responsive modal sizing */
+    @media (max-width: 1024px) {
+      .modal-overlay {
+        padding: 24px;
+      }
+
+      .modal {
+        max-width: 85vw;
+        padding: 40px 48px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .modal-overlay {
+        padding: 16px;
+      }
+
+      .modal {
+        max-width: 95vw;
+        padding: 32px 24px;
+        max-height: 92vh;
+      }
+
+      .pdf-preview {
+        height: 300px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .modal {
+        padding: 24px 20px;
+      }
+
+      .modal-title {
+        font-size: 24px;
+      }
+    }
+
+    /* Webkit scrollbar for modal */
+    .modal::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .modal::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .modal::-webkit-scrollbar-thumb {
+      background: rgba(106, 240, 160, 0.3);
+      border-radius: 3px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Cursor -->
+  <div class="cursor" id="cursor"></div>
+  <div class="cursor-ring" id="cursorRing"></div>
+
+  <!-- Background -->
+  <div class="grid-bg"></div>
+  <div class="noise"></div>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+
+  <!-- ══════════════════ HERO ══════════════════ -->
+  <section id="hero">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      JobSync AI · Sync your resume to JDs [ATS optimised]
+    </div>
+
+    <h1 class="hero-title">
+      <span class="line1">Land More</span>
+      <span class="line2">Interviews.</span>
+    </h1>
+
+    <p class="hero-sub">
+      Upload your resume, paste a job description — get a perfectly tailored,
+      ATS-optimized PDF in under 30 seconds.
+    </p>
+
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-num">98%</div>
+        <div class="stat-label">ATS Pass Rate</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">&lt;30s</div>
+        <div class="stat-label">Generation Time</div>
+      </div>
+      <div class="stat">
+        <div class="stat-num">Free</div>
+        <div class="stat-label">Always</div>
+      </div>
+    </div>
+
+    <div class="email-input-wrapper">
+      <span class="email-label">→ Enter your email to get started</span>
+      <div class="email-row">
+        <input type="email" id="heroEmail" placeholder="you@gmail.com" />
+        <button class="btn-primary" onclick="startApp()">Get Started →</button>
+      </div>
+      <div class="error-msg" id="heroError">Please enter a valid email address</div>
+    </div>
+
+    <div class="scroll-hint">
+      <div class="scroll-line"></div>
+      scroll to explore
+    </div>
+  </section>
+
+  <!-- ══════════════════ FEATURES ══════════════════ -->
+  <section id="features">
+    <div class="section-label reveal">— What we do</div>
+    <h2 class="section-title reveal reveal-delay-1">Everything your resume<br>needs to get noticed.</h2>
+
+    <div class="features-grid">
+      <div class="feature-card reveal">
+        <div class="feature-icon">🎯</div>
+        <div class="feature-title">Keyword Matching</div>
+        <div class="feature-desc">Gemini AI scans the JD and injects the exact keywords ATS systems look for — without
+          making it sound robotic.</div>
+      </div>
+      <div class="feature-card reveal reveal-delay-1">
+        <div class="feature-icon">⚡</div>
+        <div class="feature-title">Instant PDF Output</div>
+        <div class="feature-desc">LaTeX-compiled, pixel-perfect PDF. Not a Word doc with broken formatting — a real
+          professional document.</div>
+      </div>
+      <div class="feature-card reveal reveal-delay-2">
+        <div class="feature-icon">🧠</div>
+        <div class="feature-title">Smart Sections</div>
+        <div class="feature-desc">AI decides which sections to include based on your actual experience. No fake
+          volunteering if you don't have any.</div>
+      </div>
+      <div class="feature-card reveal reveal-delay-1">
+        <div class="feature-icon">🔁</div>
+        <div class="feature-title">One-Time Upload</div>
+        <div class="feature-desc">Upload your resume once. Next time, just paste the JD — we remember you and your
+          experience.</div>
+      </div>
+      <div class="feature-card reveal reveal-delay-2">
+        <div class="feature-icon">📐</div>
+        <div class="feature-title">Clean Layout</div>
+        <div class="feature-desc">ATS-friendly formatting — no tables, no columns, no images. Just clean, readable,
+          parseable text.</div>
+      </div>
+      <div class="feature-card reveal reveal-delay-3">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-title">Private by Default</div>
+        <div class="feature-desc">Your resume data is yours. We store only what's needed. No selling, no sharing, no
+          nonsense.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ HOW IT WORKS ══════════════════ -->
+  <section id="how">
+    <div class="section-label reveal">— How it works</div>
+    <h2 class="section-title reveal reveal-delay-1">Three steps.<br>One perfect resume.</h2>
+
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-left">
+          <div class="step-num">01</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-content">
+          <div class="step-title">Enter your email</div>
+          <div class="step-desc">New user? Upload your resume PDF. Returning user? We already have it — just paste the
+            JD and you're done.</div>
+        </div>
+      </div>
+      <div class="step reveal reveal-delay-1">
+        <div class="step-left">
+          <div class="step-num">02</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-content">
+          <div class="step-title">Paste the job description</div>
+          <div class="step-desc">Copy the full JD from LinkedIn, Naukri, or anywhere. The more detail, the better the
+            keyword match.</div>
+        </div>
+      </div>
+      <div class="step reveal reveal-delay-2">
+        <div class="step-left">
+          <div class="step-num">03</div>
+          <div class="step-line"></div>
+        </div>
+        <div class="step-content">
+          <div class="step-title">Download your resume</div>
+          <div class="step-desc"> In seconds, your ATS-optimized PDF is ready. Preview it, download it, apply with
+            confidence.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ ABOUT ══════════════════ -->
+  <section id="about">
+    <div class="about-grid">
+      <div class="about-card reveal">
+        <div class="about-avatar">AJ</div>
+        <div class="about-name">Aditya Jaiswal</div>
+        <div class="about-role">AI Automation Engineer</div>
+        <div class="about-bio">
+          B.Tech in CS-AI from AKTU. Building AI-powered automation systems, Software solution, and workflows.
+          This tool is one of those — built to solve a real problem I faced while applying to jobs.
+        </div>
+        <div class="about-links">
+          <a href="https://www.linkedin.com/in/adityajaiswal25/" class="about-link" target="_blank">↗ LinkedIn</a>
+          <a href="https://github.com/adityajaiswal25" class="about-link" target="_blank">↗ GitHub</a>
+          <a href="mailto:aditya.jaiswal25003@gmail.com" class="about-link">✉ Email</a>
+        </div>
+      </div>
+      <div class="about-text reveal reveal-delay-1">
+        <div class="section-label">— About the builder</div>
+        <h2 class="section-title">Made by someone<br>who needed it.</h2>
+        <p>I got tired of manually tweaking my resume for every job application. So I automated it.</p>
+        <p>This tool uses Google Gemini AI + LaTeX compilation to generate a resume that actually matches what
+          recruiters and ATS systems are looking for — not just a copy-paste job.</p>
+        <p>Built on n8n, powered by Gemini, compiled with LaTeX. Free to use, always.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ FOOTER ══════════════════ -->
+  <footer>
+    <div class="footer-name">JobSync AI</div>
+    <div class="footer-sub">Built by Aditya Jaiswal · Bengaluru, India</div>
+    <div class="footer-links">
+      <a href="https://www.linkedin.com/in/adityajaiswal25/" class="footer-link" target="_blank">LinkedIn</a>
+      <a href="https://github.com/adityajaiswal25" class="footer-link" target="_blank">GitHub</a>
+      <a href="mailto:aditya.jaiswal25003@gmail.com" class="footer-link">aditya.jaiswal25003@gmail.com</a>
+    </div>
+    <div class="footer-copy">© 2026 Aditya Jaiswal · +91 74590 03567</div>
+  </footer>
+
+  <!-- ══════════════════ APP MODAL ══════════════════ -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-close" onclick="closeModal()">✕</div>
+
+      <!-- Step 1: Email check -->
+      <div class="modal-step active" id="step-email">
+        <div class="modal-tag">Step 01 / 02</div>
+        <div class="modal-title">Let's get started.</div>
+        <div class="modal-sub">Enter your email — we'll check if you're a returning user.</div>
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" id="modalEmail" placeholder="you@gmail.com" />
+          <div class="error-msg" id="emailError">Please enter a valid email</div>
+        </div>
+        <button class="btn-full" onclick="checkEmail()">Continue →</button>
+      </div>
+
+      <!-- Step 2A: New User -->
+      <div class="modal-step" id="step-new">
+        <div class="modal-tag">New User · Step 02 / 02</div>
+        <div class="modal-title">Upload your resume.</div>
+        <div class="modal-sub">First time here — we need your resume PDF to get started. You won't need to upload again.
+        </div>
+        <div class="form-group">
+          <label class="form-label">Resume PDF</label>
+          <div class="file-upload" id="fileUpload">
+            <input type="file" id="resumeFile" accept=".pdf" onchange="fileSelected()" />
+            <div class="file-upload-icon">📄</div>
+            <div class="file-upload-text">Drop your PDF here or <span>browse</span></div>
+            <div class="file-name" id="fileName"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Job Description</label>
+          <textarea class="form-input" id="newJD" placeholder="Paste the full job description here..."></textarea>
+        </div>
+        <button class="btn-full" onclick="submitNew()">Generate Resume →</button>
+      </div>
+
+      <!-- Step 2B: Returning User -->
+      <div class="modal-step" id="step-returning">
+        <div class="modal-tag">Welcome Back · Step 02 / 02</div>
+        <div class="welcome-chip">👋 Hey, <span id="welcomeName">there</span>!</div>
+        <div class="modal-title">Paste the JD.</div>
+        <div class="modal-sub">We have your resume. Just paste the job description and we'll handle the rest.</div>
+        <div class="form-group">
+          <label class="form-label">Job Description</label>
+          <textarea class="form-input" id="returningJD" placeholder="Paste the full job description here..."></textarea>
+        </div>
+        <button class="btn-full" onclick="submitReturning()">Generate Resume →</button>
+      </div>
+
+      <!-- Step 3: Loading -->
+      <div class="modal-step" id="step-loading">
+        <div class="loading-screen">
+          <div class="loading-ring"></div>
+          <div class="loading-title">Generating your resume...</div>
+          <div class="loading-sub">This takes about 20–30 seconds. Sit tight.</div>
+          <div class="loading-steps">
+            <div class="loading-step-item active" id="ls1">
+              <div class="step-indicator">1</div>
+              Extracting resume content
+            </div>
+            <div class="loading-step-item" id="ls2">
+              <div class="step-indicator">2</div>
+              Analyzing job description
+            </div>
+            <div class="loading-step-item" id="ls3">
+              <div class="step-indicator">3</div>
+              Optimizing with Gemini AI
+            </div>
+            <div class="loading-step-item" id="ls4">
+              <div class="step-indicator">4</div>
+              Compiling LaTeX → PDF
+            </div>
+            <div class="loading-step-item" id="ls5">
+              <div class="step-indicator">5</div>
+              Finalizing your document
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 4: Result -->
+      <div class="modal-step" id="step-result">
+        <div class="pdf-result">
+          <div class="pdf-icon">✅</div>
+          <div class="pdf-title">Your resume is ready!</div>
+          <div class="pdf-sub">ATS-optimized and tailored for the job. Preview below or download directly.</div>
+          <iframe class="pdf-preview" id="pdfPreview" src=""></iframe>
+          <div class="pdf-actions">
+            <a href="#" class="btn-outline" id="previewBtn" target="_blank">👁 Full Preview</a>
+            <a href="#" class="btn-download" id="downloadBtn" download="resume_ats.pdf">⬇ Download PDF</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ══════════════════ CONFIG ══════════════════
+    // Replace with your actual n8n webhook URLs after setting up
+    const WEBHOOK_CHECK_EMAIL = 'https://n8n.srv965596.hstgr.cloud/webhook/check-email';
+    const WEBHOOK_GENERATE = 'https://n8n.srv965596.hstgr.cloud/webhook/resume-generator';
+
+    // ══════════════════ CURSOR ══════════════════
+    const cursor = document.getElementById('cursor');
+    const cursorRing = document.getElementById('cursorRing');
+    let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+
+    document.addEventListener('mousemove', e => {
+      mouseX = e.clientX; mouseY = e.clientY;
+      cursor.style.left = mouseX - 4 + 'px';
+      cursor.style.top = mouseY - 4 + 'px';
+    });
+
+    function animateRing() {
+      ringX += (mouseX - ringX) * 0.12;
+      ringY += (mouseY - ringY) * 0.12;
+      cursorRing.style.left = ringX - 16 + 'px';
+      cursorRing.style.top = ringY - 16 + 'px';
+      requestAnimationFrame(animateRing);
+    }
+    animateRing();
+
+    document.querySelectorAll('button, a, input, textarea, .file-upload').forEach(el => {
+      el.addEventListener('mouseenter', () => cursorRing.style.transform = 'scale(1.8)');
+      el.addEventListener('mouseleave', () => cursorRing.style.transform = 'scale(1)');
+    });
+
+    // ══════════════════ SCROLL REVEAL ══════════════════
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    // ══════════════════ MODAL ══════════════════
+    function openModal() {
+      document.getElementById('modalOverlay').classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+    function closeModal() {
+      document.getElementById('modalOverlay').classList.remove('active');
+      document.body.style.overflow = '';
+      showStep('step-email');
+    }
+    document.getElementById('modalOverlay').addEventListener('click', e => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    function showStep(id) {
+      document.querySelectorAll('.modal-step').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    // ══════════════════ HERO START ══════════════════
+    function startApp() {
+      const email = document.getElementById('heroEmail').value.trim();
+      if (!isValidEmail(email)) {
+        document.getElementById('heroError').classList.add('show');
+        return;
+      }
+      document.getElementById('heroError').classList.remove('show');
+      document.getElementById('modalEmail').value = email;
+      openModal();
+      checkEmail();
+    }
+
+    // ══════════════════ EMAIL CHECK ══════════════════
+    async function checkEmail() {
+      const email = document.getElementById('modalEmail').value.trim();
+      if (!isValidEmail(email)) {
+        document.getElementById('emailError').classList.add('show');
+        return;
+      }
+      document.getElementById('emailError').classList.remove('show');
+
+      const btn = document.querySelector('#step-email .btn-full');
+      btn.textContent = 'Checking...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(WEBHOOK_CHECK_EMAIL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        const isNew = data[0].new_user;
+        const name = data[0].name || '';
+
+        if (isNew) {
+          showStep('step-new');
+        } else {
+          document.getElementById('welcomeName').textContent = name;
+          showStep('step-returning');
+        }
+      } catch (err) {
+        alert('Error checking email. Please try again.');
+      } finally {
+        btn.textContent = 'Continue →';
+        btn.disabled = false;
+      }
+    }
+    // ══════════════════ FILE UPLOAD ══════════════════
+    function fileSelected() {
+      const file = document.getElementById('resumeFile').files[0];
+      if (file) document.getElementById('fileName').textContent = '📎 ' + file.name;
+    }
+
+    // ══════════════════ SUBMIT NEW USER ══════════════════
+    async function submitNew() {
+      const file = document.getElementById('resumeFile').files[0];
+      const jd = document.getElementById('newJD').value.trim();
+      const email = document.getElementById('modalEmail').value.trim();
+
+      if (!file) { alert('Please upload your resume PDF'); return; }
+      if (!jd) { alert('Please paste the job description'); return; }
+
+      showStep('step-loading');
+      startLoadingAnimation();
+
+      try {
+        const formData = new FormData();
+        formData.append('email', email);
+        formData.append('jd', jd);
+        formData.append('resume', file);
+
+        // ── REAL CALL (uncomment when webhook is ready) ──
+        const res = await fetch(WEBHOOK_GENERATE, { method: 'POST', body: formData });
+        const blob = await res.blob();
+        showPDF(blob);
+
+        // ── MOCK (remove when webhook is ready) ──
+        // await sleep(25000);
+        // showMockResult();
+
+      } catch (err) {
+        alert('Error generating resume. Please try again.');
+        showStep('step-new');
+      }
+    }
+
+    // ══════════════════ SUBMIT RETURNING USER ══════════════════
+    async function submitReturning() {
+      const jd = document.getElementById('returningJD').value.trim();
+      const email = document.getElementById('modalEmail').value.trim();
+
+      if (!jd) { alert('Please paste the job description'); return; }
+
+      showStep('step-loading');
+      startLoadingAnimation();
+
+      try {
+        // ── REAL CALL (uncomment when webhook is ready) ──
+        const res = await fetch(WEBHOOK_GENERATE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, jd })
+        });
+        const blob = await res.blob();
+        showPDF(blob);
+
+        // ── MOCK ──
+        // await sleep(25000);
+        // showMockResult();
+
+      } catch (err) {
+        alert('Error generating resume. Please try again.');
+        showStep('step-returning');
+      }
+    }
+
+    // ══════════════════ LOADING ANIMATION ══════════════════
+    function startLoadingAnimation() {
+      const steps = ['ls1', 'ls2', 'ls3', 'ls4', 'ls5'];
+      const times = [0, 4000, 9000, 16000, 22000];
+
+      steps.forEach(s => {
+        document.getElementById(s).className = 'loading-step-item';
+        document.getElementById(s).querySelector('.step-indicator').textContent = steps.indexOf(s) + 1;
+      });
+
+      steps.forEach((s, i) => {
+        setTimeout(() => {
+          if (i > 0) {
+            document.getElementById(steps[i - 1]).classList.remove('active');
+            document.getElementById(steps[i - 1]).classList.add('done');
+            document.getElementById(steps[i - 1]).querySelector('.step-indicator').textContent = '✓';
+          }
+          document.getElementById(s).classList.add('active');
+        }, times[i]);
+      });
+    }
+
+    // ══════════════════ SHOW PDF ══════════════════
+    function showPDF(blob) {
+      const url = URL.createObjectURL(blob);
+      document.getElementById('pdfPreview').src = url;
+      document.getElementById('previewBtn').href = url;
+      document.getElementById('downloadBtn').href = url;
+      showStep('step-result');
+    }
+
+    function showMockResult() {
+      // Mock — replace with real PDF blob
+      document.getElementById('pdfPreview').src = '';
+      document.getElementById('previewBtn').href = '#';
+      document.getElementById('downloadBtn').href = '#';
+      showStep('step-result');
+    }
+
+    // ══════════════════ UTILS ══════════════════
+    function isValidEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+  </script>
+</body>
+
+</html>
